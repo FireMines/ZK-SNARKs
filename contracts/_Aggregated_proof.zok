@@ -1,0 +1,12 @@
+// aggregated_proof.zok
+// Set the number of clients whose commitments will be aggregated.
+const u32 NUM_CLIENTS = 5; // adjust as needed
+
+// This circuit proves that the product of NUM_CLIENTS commitments equals the public aggregated commitment.
+def main(private field[NUM_CLIENTS] commitments, public field aggregated_commitment) -> bool {
+    field prod = 1;
+    for u32 i in 0..NUM_CLIENTS {
+        prod = prod * commitments[i];
+    }
+    return prod == aggregated_commitment;
+}

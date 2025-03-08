@@ -1,0 +1,49 @@
+// Constants for our circuit.
+const u32 NUM_CLIENTS = 10;
+const u32 NUM_METRICS = 5;  // Assuming we are aggregating 5 prediction outcomes or probabilities
+const u32 TUPLE_SIZE = NUM_METRICS + 1; // Each client: [weight, prediction1, ..., prediction5]
+
+// Define a scaling factor to convert floating-point numbers into integers.
+const field SCALING_FACTOR = 1000000;
+
+// This function aggregates predictions from multiple clients using a weighted average.
+def aggregate_predictions(field[NUM_CLIENTS][TUPLE_SIZE] client_predictions) -> field[NUM_METRICS] {
+    // Unpack each client's data.
+    // weight: first element of each tuple.
+    field[NUM_CLIENTS] mut weights = [0; NUM_CLIENTS];
+    // predictions: the remaining TUPLE_SIZE - 1 elements in each row.
+    field[NUM_CLIENTS][NUM_METRICS] mut predictions = [[0; NUM_METRICS]; NUM_CLIENTS];
+
+    for u32 i in 0..NUM_CLIENTS {
+        weights[i] = client_predictions[i][0];
+        for u32 j in 0..NUM_METRICS {
+            predictions[i][j] = client_predictions[i][j + 1];
+        }
+    }
+
+    // Compute the total weight across all clients.
+    field mut total_weight = 0;
+    for u32 i in 0..NUM_CLIENTS {
+        total_weight = total_weight + weights[i];
+    }
+
+    // Initialize aggregated predictions.
+    field[NUM_METRICS] mut aggregated = [0; NUM_METRICS];
+
+    // For each prediction metric, compute a weighted sum and then the weighted average.
+    for u32 j in 0..NUM_METRICS {
+        field mut weighted_sum = 0;
+        for u32 i in 0..NUM_CLIENTS {
+            weighted_sum = weighted_sum + predictions[i][j] * weights[i];
+        }
+        // If total_weight is 0, output 0; otherwise, perform integer division.
+        aggregated[j] = total_weight == 0 ? 0 : weighted_sum / total_weight;
+    }
+
+    return aggregated;
+}
+
+// Main entry point for the circuit.
+def main(private field[NUM_CLIENTS][TUPLE_SIZE] client_predictions) -> field[NUM_METRICS] {
+    return aggregate_predictions(client_predictions);
+}

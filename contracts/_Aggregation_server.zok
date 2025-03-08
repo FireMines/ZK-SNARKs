@@ -1,0 +1,55 @@
+// Constants for the circuit
+const u32 NUM_CLIENTS = 5;           // Number of clients (hospitals in your scenario)
+const u32 NUM_SAMPLES = 10;          // Number of test samples for aggregation
+const u32 NUM_CLASSES = 2;           // Binary classification (e.g., drug sensitivity: 0 or 1)
+const field SCALING_FACTOR = 1000000; // Scaling factor for fixed-point arithmetic
+
+// Function to verify the server's aggregation process
+def verify_server_aggregation(
+    field[NUM_CLIENTS][NUM_SAMPLES][NUM_CLASSES] client_predictions, // Client-specific predictions
+    field[NUM_CLIENTS] weights,                                      // Client-specific weights
+    field[NUM_SAMPLES][NUM_CLASSES] aggregated_result                // Public aggregated result to verify
+) -> bool {
+    // Temporary array to compute the server's aggregation
+    field[NUM_SAMPLES][NUM_CLASSES] mut computed_result = [[0; NUM_CLASSES]; NUM_SAMPLES];
+    
+    // Compute total weight for normalization
+    field mut total_weight = 0;
+    for u32 i in 0..NUM_CLIENTS {
+        assert(weights[i] >= 0); // Ensure weights are non-negative
+        total_weight = total_weight + weights[i];
+    }
+    assert(total_weight > 0); // Prevent division by zero
+
+    // Compute weighted average of predictions (FedXgbBagging-style aggregation)
+    for u32 j in 0..NUM_SAMPLES {
+        for u32 k in 0..NUM_CLASSES {
+            field mut weighted_sum = 0;
+            for u32 i in 0..NUM_CLIENTS {
+                // Ensure predictions are within valid bounds (0 to 1 scaled)
+                assert(client_predictions[i][j][k] >= 0);
+                assert(client_predictions[i][j][k] <= SCALING_FACTOR);
+                weighted_sum = weighted_sum + client_predictions[i][j][k] * weights[i];
+            }
+            computed_result[j][k] = weighted_sum / total_weight;
+        }
+    }
+
+    // Verify that the computed result matches the public aggregated result
+    for u32 j in 0..NUM_SAMPLES {
+        for u32 k in 0..NUM_CLASSES {
+            assert(computed_result[j][k] == aggregated_result[j][k]);
+        }
+    }
+
+    return true;
+}
+
+// Main function for the zkSNARK circuit
+def main(
+    private field[NUM_CLIENTS][NUM_SAMPLES][NUM_CLASSES] client_predictions,
+    private field[NUM_CLIENTS] weights,
+    public field[NUM_SAMPLES][NUM_CLASSES] aggregated_result
+) -> bool {
+    return verify_server_aggregation(client_predictions, weights, aggregated_result);
+}

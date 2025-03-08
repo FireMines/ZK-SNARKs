@@ -1,0 +1,49 @@
+// Constants for our circuit.
+const u32 NUM_CLIENTS = 10;
+const u32 NUM_METRICS = 5;
+const u32 TUPLE_SIZE = NUM_METRICS + 1; // Each client: [num_examples, metric1, ..., metric5]
+
+// Define a scaling factor to convert floating-point numbers into integers.
+const field SCALING_FACTOR = 1000000;
+
+// This function unpacks the client data, computes the weighted average for each scaled metric,
+// and returns the aggregated scaled metrics.
+def evaluate_metrics_aggregation_from_tuple(private field[NUM_CLIENTS][TUPLE_SIZE] client_data) -> field[NUM_METRICS] {
+    // Unpack each client's data.
+    // num_examples: first element of each tuple.
+    field[NUM_CLIENTS] mut num_examples = [0; NUM_CLIENTS];
+    // metrics: the remaining TUPLE_SIZE - 1 elements in each row.
+    field[NUM_CLIENTS][NUM_METRICS] mut metrics = [[0; NUM_METRICS]; NUM_CLIENTS];
+
+    for u32 i in 0..NUM_CLIENTS {
+        num_examples[i] = client_data[i][0];
+        for u32 j in 0..NUM_METRICS {
+            metrics[i][j] = client_data[i][j + 1];
+        }
+    }
+
+    // Compute the total number of examples across all clients.
+    field mut total_examples = 0;
+    for u32 i in 0..NUM_CLIENTS {
+        total_examples = total_examples + num_examples[i];
+    }
+
+    // Initialize aggregated metrics.
+    field[NUM_METRICS] mut aggregated = [0; NUM_METRICS];
+
+    // For each metric, compute a weighted sum and then the weighted average.
+    for u32 j in 0..NUM_METRICS {
+        field mut weighted_sum = 0;
+        for u32 i in 0..NUM_CLIENTS {
+            weighted_sum = weighted_sum + metrics[i][j] * num_examples[i];
+        }
+        // If total_examples is 0, output 0; otherwise, perform integer division.
+        aggregated[j] = total_examples == 0 ? 0 : weighted_sum / total_examples;
+    }
+    return aggregated;
+}
+
+// Main entry point for the circuit.
+def main(private field[NUM_CLIENTS][TUPLE_SIZE] client_data) -> field[NUM_METRICS] {
+    return evaluate_metrics_aggregation_from_tuple(client_data);
+}

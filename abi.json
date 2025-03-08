@@ -1,0 +1,24 @@
+{
+  "inputs": [
+    {
+      "name": "eval_metrics",
+      "public": false,
+      "type": "array",
+      "components": {
+        "size": 10,
+        "type": "array",
+        "components": {
+          "size": 6,
+          "type": "field"
+        }
+      }
+    }
+  ],
+  "output": {
+    "type": "array",
+    "components": {
+      "size": 5,
+      "type": "field"
+    }
+  }
+}

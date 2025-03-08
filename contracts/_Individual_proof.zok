@@ -1,0 +1,15 @@
+// individual_proof.zok
+// Fixed generators for the commitment (for demonstration only)
+// In practice, choose secure values from the underlying field.
+const field g = 2;
+const field h = 3;
+
+// This circuit proves that the prover knows x and r such that:
+//   commitment = g^x * h^r
+// - x and r are kept private, while commitment is public.
+def main(private field x, private field r, public field commitment) -> bool {
+    field gx = pow(g, x);
+    field hr = pow(h, r);
+    field computed = gx * hr;
+    return computed == commitment;
+}
